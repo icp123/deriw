@@ -16,11 +16,11 @@
 
 1. [安装环境](#安装环境)
 2. 将私钥放入`pk.txt`。或者将生成`batch_acc.txt`文件内容copy到`pk.txt`中。
-3. 执行`python3 claim.py`  
+3. 进入`script`目录，执行`python3 claim.py`  
 
 
 ### 市价做多
 
 1. [安装环境](#安装环境)
 2. 将私钥放入`pk.txt`。或者将生成`batch_acc.txt`文件内容copy到`pk.txt`中。
-3. 执行`python3 mark_long.py`  
+3. 进入`script`目录，执行`python3 mark_long.py`  
