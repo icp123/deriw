@@ -10,6 +10,7 @@ GWEI = 1000000000
 GAS_LIMIT = 200000
 
 rpc_url = "https://rpc.test.deriw.com/"
+EXPLORER_HOST = "https://explorer.test.deriw.com"
 Chain_id = 35318034165
 AIRDROP_CONTRACT_ADDRESS = "0x1206f4f4dE5F7B06563880a50B866bB29247AD2e"
 ERC20_CONTRACT_ADDRESS = "0x2861644dC8723b30D10EEd2474F5c7d6D5F386FD"
@@ -153,17 +154,11 @@ def batch_claim():
     excel_path = 'pk.txt'
     rows = read_line(excel_path)
     for r in rows:
-        tx_hash = claim(r)
-        print("https://explorer.test.deriw.com/tx/{}".format(tx_hash))
+        balance = get_amount_from_erc20(from_key(r.split(',')[0]))
+        print(balance)
+        tx_hash = claim(r.split(',')[0])
+        print("{}/tx/{}".format(EXPLORER_HOST, tx_hash))
         time.sleep(random.uniform(1, 5))
-
-
-def check_balance():
-    excel_path = 'pk.txt'
-    rows = read_line(excel_path)
-    for r in rows:
-        addr = from_key(r)
-        print('address:{}, balance:{}'.format(addr, get_amount_from_erc20(addr)))
 
 
 if __name__ == '__main__':
@@ -171,4 +166,3 @@ if __name__ == '__main__':
     在同级目录创建文件：pk.txt
     '''
     batch_claim()
-    # check_balance()
