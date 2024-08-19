@@ -341,6 +341,7 @@ def create_log(account):
 
 
 def batch_market(usdt, leverage):
+    print("[{}]=====> 开始发送交易，支付金额：{} USDT, 杠杆倍数：{}".format(get_current_time(), usdt, leverage))
     excel_path = 'pk.txt'
     rows = read_line(excel_path)
     for pk in rows:
@@ -354,14 +355,28 @@ def batch_market(usdt, leverage):
         time.sleep(random.randint(2, 6))
 
 
+def input_param():
+    print('请输入下单金额(USDT)：')
+    try:
+        usdt = int(input(''))
+    except ValueError:
+        print("金额应为数字！！")
+        exit(1)
+    print('请输入杠杆倍数：')
+    try:
+        leverage = int(input(''))
+        if leverage < 2 or leverage > 100:
+            raise ValueError
+    except ValueError:
+        print("杠杆应为2~100的数字！！")
+        exit(1)
+    return usdt, leverage
+
+
 if __name__ == '__main__':
     '''
     在同级目录创建文件：pk.txt
     市价做多。
-    参数：
-    usdt：支付的U
-    leverage：杠杆；eg: 两倍杠杆=2
     '''
-    usdt = 10
-    leverage = 2
-    batch_market(usdt, leverage)
+    in_param = input_param()
+    batch_market(in_param[0], in_param[1])
