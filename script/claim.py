@@ -153,12 +153,15 @@ def from_key(privateKey):
 def batch_claim():
     excel_path = 'pk.txt'
     rows = read_line(excel_path)
-    for r in rows:
-        balance = get_amount_from_erc20(from_key(r.split(',')[0]))
-        print(balance)
-        tx_hash = claim(r.split(',')[0])
-        print("{}/tx/{}".format(EXPLORER_HOST, tx_hash))
-        time.sleep(random.uniform(1, 5))
+    print("[{}]=====> 领水的账户数量：{}".format(get_current_time(), len(rows)))
+    print("[{}]=====> 确认开始领水？ Y/N".format(get_current_time()))
+    if 'Y' == input('').upper():
+        for r in rows:
+            balance = get_amount_from_erc20(from_key(r.split(',')[0]))
+            print(balance)
+            tx_hash = claim(r.split(',')[0])
+            print("{}/tx/{}".format(EXPLORER_HOST, tx_hash))
+            time.sleep(random.uniform(1, 5))
 
 
 if __name__ == '__main__':

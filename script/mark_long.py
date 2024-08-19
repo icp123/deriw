@@ -344,15 +344,18 @@ def batch_market(usdt, leverage):
     print("[{}]=====> 开始发送交易，支付金额：{} USDT, 杠杆倍数：{}".format(get_current_time(), usdt, leverage))
     excel_path = 'pk.txt'
     rows = read_line(excel_path)
-    for pk in rows:
-        pk = pk.split(',')[0]
-        check_and_approve(pk)
-        p = build_param(usdt, leverage)
+    print("[{}]=====> 开杠杆的账户数量：{}".format(get_current_time(), len(rows)))
+    print("[{}]=====> 确认开始发送交易？ Y/N".format(get_current_time()))
+    if 'Y' == input('').upper():
+        for pk in rows:
+            pk = pk.split(',')[0]
+            check_and_approve(pk)
+            p = build_param(usdt, leverage)
 
-        # create_log(from_key(pk))
-        tx_hash = do_long(pk, p)
-        print("{}/tx/{}".format(EXPLORER_HOST, tx_hash))
-        time.sleep(random.randint(2, 6))
+            # create_log(from_key(pk))
+            tx_hash = do_long(pk, p)
+            print("{}/tx/{}".format(EXPLORER_HOST, tx_hash))
+            time.sleep(random.randint(2, 6))
 
 
 def input_param():
