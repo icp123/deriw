@@ -19,6 +19,9 @@ DEX_CONTRACT_ADDRESS = "0x9Fb76a6B771B39B1BC138C1e7b4a7a4E2a53cCD4"
 ERC20_CONTRACT_ADDRESS = "0x2861644dC8723b30D10EEd2474F5c7d6D5F386FD"
 SPENDER_ADDRESS = '0xc341cCD15cb8dC4e1020FC06EeF53aCb6010DDE1'
 
+WETH = '0xb86b491dA10f9194C0C5c0B29cD1298fAf1A634A'
+WBTC = "0x854C1FDEbeef84b4dAE58C4aD7649977e491f512"
+
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
 
 E_18 = 1000000000000000000
@@ -190,11 +193,17 @@ def generate_claim_transaction_dict(account_from, param):
     contract_instance = w3.eth.contract(address=DEX_CONTRACT_ADDRESS, abi=DEX_ABI)
 
     usdt_amount = param[0]
+    # 支付金额*杠杆倍数
     p1 = param[1]
+    # eth/btc币价
     p2 = param[2]
-    tx = contract_instance.functions.createDecreasePosition([ERC20_CONTRACT_ADDRESS],
-                                                            '0xb86b491dA10f9194C0C5c0B29cD1298fAf1A634A',
-                                                            usdt_amount, p1, 1, p2, 0, 0).buildTransaction(
+    if "WETH" == param[3]:
+        p4 = WETH
+    elif 'WBTC' == param[3]:
+        p4 = WBTC
+
+    tx = contract_instance.functions.createDecreasePosition([ERC20_CONTRACT_ADDRESS], p4, usdt_amount, p1, 1, p2, 0,
+                                                            0).buildTransaction(
         {
             "chainId": Chain_id,
             'from': account_from,
@@ -214,8 +223,8 @@ def send_transaction(transaction_dict, private_key, address):
     tx_hash = w3.eth.sendRawTransaction(tx_create.rawTransaction)
     print("[{}]===> account:{} tx hash:{} ".format(get_current_time(), address, tx_hash.hex()))
     w3.eth.waitForTransactionReceipt(tx_hash)
-    print("[{}]===>  address={} has complete the transaction: {}/tx/{}!".format(get_current_time(), address,
-                                                                                EXPLORER_HOST, tx_hash.hex()))
+    print("[{}]===> address={} has complete the transaction: {}/tx/{}".format(get_current_time(), address,
+                                                                              EXPLORER_HOST, tx_hash.hex()))
     return tx_hash.hex()
 
 
@@ -235,8 +244,7 @@ def do_long(private_key, param):
     tx_dict = generate_claim_transaction_dict(wallet_address, param)
     tx_dict['data'] = '0x2e24d502' + tx_dict['data'][10:]
     tx_hash = send_transaction(tx_dict, private_key, wallet_address)
-    print("[{}]===> market long success")
-    return tx_hash
+    print("[{}]===> market long success".format(get_current_time()))
 
 
 def get_current_time():
@@ -273,7 +281,7 @@ def get_time():
     return int(next_time.timestamp() / 100) * 100
 
 
-def get_eth_price():
+def get_price(symbol):
     headers = {
         'Accept': 'application/json, text/plain, */*',
         'Origin': 'https://deriw.com',
@@ -282,23 +290,25 @@ def get_eth_price():
     }
     j = json.loads("{\"data\":{\"prices\":null}}")
     while 'prices' not in j['data'] or j['data']['prices'] is None:
-        url = 'https://api.test.deriw.com/client/candles?symbol=WETH&preferable_chain_id=97&period=5m&from=' + str(
+        url = 'https://api.test.deriw.com/client/candles?symbol=' + symbol + '&preferable_chain_id=97&period=5m&from=' + str(
             get_five_minute_ago()) + '&limit=1'
         res = requests.get(url, headers=headers)
         j = json.loads(res.text)
         if j['data']['prices'] is None:
-            print("wating eth price...")
+            print("wating {} price...".format(symbol))
             time.sleep(5)
     return float(j['data']['prices'][0]['c'])
 
 
-def build_param(u, lever):
-    eth_price = get_eth_price()
-    eth_price = eth_price + 2.62
-    eth_price = int(eth_price * E_12) * E_18
+def build_param(u, lever, target):
+    if 'WETH' == target:
+        price = get_price('WETH') + 2.62
+    elif 'WBTC' == target:
+        price = get_price('WBTC') + 50.5
+    price = int(price * E_12) * E_18
     leverage_amount = u * lever * E_18 * E_12
     leverage_amount = leverage_amount - random.randint(100000, 474400000000000)
-    return u * E_18, leverage_amount, eth_price
+    return u * E_18, leverage_amount, price, target
 
 
 def check_and_approve(pk):
@@ -340,8 +350,9 @@ def create_log(account):
     assert 200 == json.loads(res.text)['status']
 
 
-def batch_market(usdt, leverage):
-    print("[{}]=====> 开始发送交易，支付金额：{} USDT, 杠杆倍数：{}".format(get_current_time(), usdt, leverage))
+def batch_market(usdt, leverage, target):
+    print("[{}]=====> 支付金额：{} USDT, 做多：{}, 当前价格：{}, 杠杆倍数：{}".format(get_current_time(), usdt, target,
+                                                                    get_price(target), leverage))
     excel_path = 'pk.txt'
     rows = read_line(excel_path)
     print("[{}]=====> 开杠杆的账户数量：{}".format(get_current_time(), len(rows)))
@@ -350,11 +361,10 @@ def batch_market(usdt, leverage):
         for pk in rows:
             pk = pk.split(',')[0]
             check_and_approve(pk)
-            p = build_param(usdt, leverage)
+            p = build_param(usdt, leverage, target)
 
             # create_log(from_key(pk))
-            tx_hash = do_long(pk, p)
-            print("{}/tx/{}".format(EXPLORER_HOST, tx_hash))
+            do_long(pk, p)
             time.sleep(random.randint(2, 6))
 
 
@@ -373,7 +383,16 @@ def input_param():
     except ValueError:
         print("杠杆应为2~100的数字！！")
         exit(1)
-    return usdt, leverage
+
+    print('请输入做多品种：（WETH/WBTC）')
+    try:
+        target = input('')
+        if ('WETH' == target.upper() or 'WBTC' == target.upper()) is False:
+            raise ValueError
+    except ValueError:
+        print("请输入WETH或者WBTC")
+        exit(1)
+    return usdt, leverage, target.upper()
 
 
 if __name__ == '__main__':
@@ -382,4 +401,4 @@ if __name__ == '__main__':
     市价做多。
     '''
     in_param = input_param()
-    batch_market(in_param[0], in_param[1])
+    batch_market(in_param[0], in_param[1], in_param[2])
